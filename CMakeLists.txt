@@ -15,6 +15,12 @@ set(LINK_CUT_TREE
 	${SRC_DIR}/link_cut_tree.h
 )
 
+set(EULER_TREE
+	${SPLAY_TREE}
+	${SRC_DIR}/euler_tree.h
+)
+
 add_executable(splay_tree_test splay_tree_test_unit.cpp ${SPLAY_TREE})
 add_executable(link_cut_tree_test link_cut_tree_test_unit.cpp ${LINK_CUT_TREE})
 add_executable(lct_evert_test link_cut_tree_evert_test_unit.cpp ${LINK_CUT_TREE})
+add_executable(euler_tree_test euler_tree_test_unit.cpp ${EULER_TREE})
