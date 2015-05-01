@@ -36,102 +36,9 @@ struct SplayNode : BasicTreeNode < SplayNode<T, ST> > {
 	}
 };
 
-
-template < class T, class ST, class Node = SplayNode<T, ST>, class Comp = std::less<T> >
-class SplayTree {
+template < class T, class Node, class Comp >
+class SplayTreeBase {
 public:
-	typedef SplayTree<T ,ST, Comp> STree;
-
-	// *******************************************
-	// Basic interfaces for basic splay tree usage
-	// *******************************************
-	// Construct an empty splay tree
-	SplayTree() : root(NULL) {}
-	// Disassemble the tree
-	~SplayTree() { delete root; }
-
-	// Insert key x in the tree
-	void Insert(const T&x) {
-		if (!root) { root = CreateNode(x); Splay(root); return; }
-		Node* cur = Search(x);
-		if (Comp()(x, cur->key)) cur->Left() = CreateNode(x, cur), Splay(cur->Left());
-		else if (Comp()(cur->key, x)) cur->Right() = CreateNode(x, cur), Splay(cur->Right());
-		else cur->stat.Add(), Splay(cur);
-	}
-
-	// Erase elements with key x
-	void Erase(const T& x) {
-		if (!root) return;
-		Splay(Search(x)); 
-		if (x != root->key) return;
-		root->stat.Remove(); 
-		if (root->stat.Exist()) return;
-		while (root->Left() && root->Left()->Right()) Rotate(root->Left()->Right());
-		Node* tmp = root;
-		if (!root->Left() && !root->Right()) root = NULL;
-		else if (!root->Left()) root = root->Right();
-		else if (!root->Right()) root = root->Left();
-		else { 
-			root->Left()->Right() = root->Right(); 
-			root->Left()->Right()->Parent() = root->Left(); 
-			root = root->Left(); 
-		}
-		if (root) root->Parent() = NULL, Update(root->Left()), Update(root->Right());
-		Update(root);
-		tmp->Left() = tmp->Right() = NULL;
-		delete tmp;
-	}
-
-	// *******************
-	// Statistic Functions
-	// *******************
-	// Get Statistic Functions
-	ST Statistic(const T& x) {
-		return Splay(Search(x)), (root && x == root->key)?root->stat:ST();
-	}
-
-	// Make Statistics on the elements such that Compare()(elements, x) is true 
-	// or !Compare()(elements, x) and !Compare()(x, elements) (meaning the same)
-	ST StatisticComp(const T& x) {
-		if (!root) return ST();
-		Splay(Search(x));
-		ST ret;
-		if ((!Comp()(root->key, x) && !Comp()(x, root->key)) ||
-				(Comp()(root->key, x))) {
-			ret = root->stat;
-			ret.Init(root->key);
-		}
-		if (root->Left()) ret.UpdateLeft(root->Left()->stat);
-		return ret;
-	}
-
-	// According to given navigator
-	// it follows the tree and makes a new statistic
-	template<class Navigator>
-	T Find(Navigator nav, const T & empty = T()) {
-		if (!root) return empty;
-		Node* cur = root;
-		nav.Init();
-		while (cur) {
-			typename Navigator::Direction next = nav.Next(cur);
-			switch (next) {
-				case Navigator::LEFT:
-					cur = cur->Left(); break;
-				case Navigator::RIGHT:
-					cur = cur->Right();	break;
-				case Navigator::TARGET:
-					Splay(cur); // amortization
-					return cur->key;
-				case Navigator::LOST: 
-					return empty;
-				// UP is not allowed here (time complexity)
-				case Navigator::UP:
-					assert(false);
-			}
-		}
-		return empty;
-	}
-
 	// ***************************************************
 	// Static functions required by dynamic tree structure
 	// ***************************************************
@@ -218,6 +125,103 @@ public:
 		SplayNode(y); // Amortization
 		return ret;
 	}
+};
+
+template < class T, class ST, class Node = SplayNode<T, ST>, class Comp = std::less<T> >
+class SplayTree : public SplayTreeBase<T, Node, Comp> {
+public:
+	typedef SplayTreeBase<T, Node, Comp> STBase;
+
+	// *******************************************
+	// Basic interfaces for basic splay tree usage
+	// *******************************************
+	// Construct an empty splay tree
+	SplayTree() : root(NULL) {}
+	// Disassemble the tree
+	~SplayTree() { delete root; }
+
+	// Insert key x in the tree
+	void Insert(const T&x) {
+		if (!root) { root = STBase::CreateNode(x); Splay(root); return; }
+		Node* cur = Search(x);
+		if (Comp()(x, cur->key)) cur->Left() = STBase::CreateNode(x, cur), Splay(cur->Left());
+		else if (Comp()(cur->key, x)) cur->Right() = STBase::CreateNode(x, cur), Splay(cur->Right());
+		else cur->stat.Add(), Splay(cur);
+	}
+
+	// Erase elements with key x
+	void Erase(const T& x) {
+		if (!root) return;
+		Splay(Search(x)); 
+		if (x != root->key) return;
+		root->stat.Remove(); 
+		if (root->stat.Exist()) return;
+		while (root->Left() && root->Left()->Right()) STBase::Rotate(root->Left()->Right());
+		Node* tmp = root;
+		if (!root->Left() && !root->Right()) root = NULL;
+		else if (!root->Left()) root = root->Right();
+		else if (!root->Right()) root = root->Left();
+		else { 
+			root->Left()->Right() = root->Right(); 
+			root->Left()->Right()->Parent() = root->Left(); 
+			root = root->Left(); 
+		}
+		if (root) root->Parent() = NULL, STBase::Update(root->Left()), STBase::Update(root->Right());
+		STBase::Update(root);
+		tmp->Left() = tmp->Right() = NULL;
+		delete tmp;
+	}
+
+	// *******************
+	// Statistic Functions
+	// *******************
+	// Get Statistic Functions
+	ST Statistic(const T& x) {
+		return Splay(Search(x)), (root && x == root->key)?root->stat:ST();
+	}
+
+	// Make Statistics on the elements such that Compare()(elements, x) is true 
+	// or !Compare()(elements, x) and !Compare()(x, elements) (meaning the same)
+	ST StatisticComp(const T& x) {
+		if (!root) return ST();
+		Splay(Search(x));
+		ST ret;
+		if ((!Comp()(root->key, x) && !Comp()(x, root->key)) ||
+				(Comp()(root->key, x))) {
+			ret = root->stat;
+			ret.Init(root->key);
+		}
+		if (root->Left()) ret.UpdateLeft(root->Left()->stat);
+		return ret;
+	}
+
+	// According to given navigator
+	// it follows the tree and makes a new statistic
+	template<class Navigator>
+	T Find(Navigator nav, const T & empty = T()) {
+		if (!root) return empty;
+		Node* cur = root;
+		nav.Init();
+		while (cur) {
+			typename Navigator::Direction next = nav.Next(cur);
+			switch (next) {
+				case Navigator::LEFT:
+					cur = cur->Left(); break;
+				case Navigator::RIGHT:
+					cur = cur->Right();	break;
+				case Navigator::TARGET:
+					Splay(cur); // amortization
+					return cur->key;
+				case Navigator::LOST: 
+					return empty;
+				// UP is not allowed here (time complexity)
+				case Navigator::UP:
+					assert(false);
+			}
+		}
+		return empty;
+	}
+
 
 	/******************************
 	 * Static Statistic Functions *
@@ -225,7 +229,7 @@ public:
 	static ST RangeStatistic(Node *f, Node *t) {
 		ST stat;
 		Node *cur = f;
-		SplayNode(t);
+		STBase::SplayNode(t);
 		stat.Init(cur->key);
 		if (cur->Right() && cur->Parent()) stat.UpdateRight(cur->Right()->stat);
 		while (cur->Parent()) {
@@ -240,7 +244,7 @@ public:
 			}
 			cur = parent;
 		}
-		SplayNode(f); // Amortization
+		STBase::SplayNode(f); // Amortization
 		return stat;
 	}
 
@@ -249,7 +253,7 @@ public:
 	// that is, caller should manage splaynode(f) at some point
 	template <class Navigator>
 	static Node * NavigatorSearch(Navigator nav, Node *f, Node *t) {
-		SplayNode(t);
+		STBase::SplayNode(t);
 		Node * cur = f;
 		nav.Init();
 		while (cur) {
@@ -262,7 +266,7 @@ public:
 				case Navigator::UP:
 					cur = cur->Parent(); break;
 				case Navigator::TARGET:
-					SplayNode(cur); // amortization
+					STBase::SplayNode(cur); // amortization
 					return cur;
 				case Navigator::LOST: 
 					return NULL;
@@ -282,10 +286,9 @@ private:
 	}
 
 	void Splay(Node* x) {
-		SplayNode(x);
+		STBase::SplayNode(x);
 		root = x;
 	}
-
 
 	Node *root;
 };

@@ -40,7 +40,7 @@ private:
 		}
 	};
 	
-	typedef SplayTree<T, Stat, Node, FalseComp> ST;
+	typedef SplayTreeBase<T, Node, FalseComp> ST;
 	typedef typename std::unordered_set<Node*> NodeSet;
 	typedef typename NodeSet::iterator ns_it;
 
@@ -204,7 +204,6 @@ private:
 		for (size_t i = path.size() ; i --> 0 ;) 
 			PushReverse(path[i]);
 	}
-
 
 	// TODO : Evert check for every splay?? 
 	void Splay(Node *v) {
